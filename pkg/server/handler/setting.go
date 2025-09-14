@@ -12,7 +12,7 @@ const (
 )
 
 // HandleSettingGet ゲーム設定情報取得処理
-func HandleSettingGet() http.HandlerFunc {
+func (handler *handler) HandleSettingGet() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		data, err := json.Marshal(&settingGetResponse{
 			GachaCoinConsumption: GachaCoinConsumption,

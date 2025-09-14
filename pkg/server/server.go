@@ -1,17 +1,32 @@
 package server
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 
+	"42tokyo-road-to-dojo-go/pkg/infra/dao"
 	"42tokyo-road-to-dojo-go/pkg/server/handler"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 // Serve HTTPサーバを起動する
 func Serve(addr string) {
+	// parseTime=true を指定しないと、TIME 型のカラムを Go の time.Time にマッピングできない
+	db, err := sql.Open("mysql", "root:ca-tech-dojo@tcp(127.0.0.1:3306)/game_api_db?parseTime=true")
+	if err != nil {
+		log.Fatalf("DB connection failed: %+v", err)
+	}
+	defer db.Close()
+
+	// 依存性の注入 (DI)
+	userDao := dao.NewUserDao(db)
+	appHandler := handler.NewHandler(userDao)
 
 	/* ===== URLマッピングを行う ===== */
-	http.HandleFunc("/setting/get", get(handler.HandleSettingGet()))
+	http.HandleFunc("/setting/get", get(appHandler.HandleSettingGet()))
+	http.HandleFunc("/user/create", post(appHandler.HandleUserCreate()))
 
 	// TODO: 認証を行うmiddlewareを実装する
 	// middlewareは pkg/http/middleware パッケージを利用する
@@ -20,7 +35,7 @@ func Serve(addr string) {
 
 	/* ===== サーバの起動 ===== */
 	log.Println("Server running...")
-	err := http.ListenAndServe(addr, nil)
+	err = http.ListenAndServe(addr, nil)
 	if err != nil {
 		log.Fatalf("Listen and serve failed. %+v", err)
 	}
