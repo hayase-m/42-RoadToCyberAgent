@@ -8,6 +8,11 @@ import (
 	"42tokyo-road-to-dojo-go/pkg/infra/dao"
 )
 
+// ctxに直接strを渡すとエラーがでるので、新しい型を定義
+type contextKey string
+
+const userIDkey contextKey = "user_id"
+
 type middleware struct {
 	userDao dao.UserDao
 }
@@ -47,7 +52,7 @@ func (middleware *middleware) Authenticate(nextFunc http.HandlerFunc) http.Handl
 			return
 		}
 
-		ctx = context.WithValue(ctx, "user_id", user.ID) //ctxはイミュータブルなので、新たなcontextを作成
+		ctx = context.WithValue(ctx, userIDkey, user.ID) //ctxはイミュータブルなので、新たなcontextを作成
 		nextFunc(writer, request.WithContext(ctx))
 	}
 }
