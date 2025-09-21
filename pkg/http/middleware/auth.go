@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"database/sql"
+	"log"
 	"net/http"
 
 	"42tokyo-road-to-dojo-go/pkg/infra/dao"
@@ -11,7 +12,7 @@ import (
 // ctxに直接strを渡すとエラーがでるので、新しい型を定義
 type contextKey string
 
-const userIDkey contextKey = "user_id"
+const UserIDKey contextKey = "user_id"
 
 type middleware struct {
 	userDao dao.UserDao
@@ -33,7 +34,6 @@ func (middleware *middleware) Authenticate(nextFunc http.HandlerFunc) http.Handl
 			ctx = context.Background()
 		}
 
-		// TODO: implement here
 		token := request.Header.Get("x-token")
 		if token == "" {
 			//認証エラーは401
@@ -48,11 +48,12 @@ func (middleware *middleware) Authenticate(nextFunc http.HandlerFunc) http.Handl
 				return
 			}
 			//それ以外は500エラー
+			log.Println(err)
 			writer.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		ctx = context.WithValue(ctx, userIDkey, user.ID) //ctxはイミュータブルなので、新たなcontextを作成
+		ctx = context.WithValue(ctx, UserIDKey, user.ID) //ctxはイミュータブルなので、新たなcontextを作成
 		nextFunc(writer, request.WithContext(ctx))
 	}
 }

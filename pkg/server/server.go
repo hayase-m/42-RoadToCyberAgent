@@ -29,9 +29,7 @@ func Serve(addr string) {
 	/* ===== URLマッピングを行う ===== */
 	http.HandleFunc("/setting/get", get(appHandler.HandleSettingGet()))
 	http.HandleFunc("/user/create", post(appHandler.HandleUserCreate()))
-
-	http.HandleFunc("/user/get",
-		get(appMiddleware.Authenticate(appHandler.HandleUserGet())))
+	http.HandleFunc("/user/get", get(appMiddleware.Authenticate(appHandler.HandleUserGet())))
 
 	/* ===== サーバの起動 ===== */
 	log.Println("Server running...")
