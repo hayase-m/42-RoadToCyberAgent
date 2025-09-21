@@ -7,9 +7,10 @@ import (
 
 // UserDaoという型を定義。
 type UserDao interface {
-	Create(name, token string) error
+	Create(ctx context.Context, name string, token string) error
 	FindByToken(ctx context.Context, token string) (*User, error)
 	FindByID(ctx context.Context, userID int) (*User, error)
+	UpdateName(ctx context.Context, userID int, newName string) error
 }
 
 type userDao struct {
@@ -30,8 +31,8 @@ func NewUserDao(db *sql.DB) UserDao {
 }
 
 // ユーザーを新規作成
-func (userDao *userDao) Create(name, token string) error {
-	_, err := userDao.db.Exec("INSERT INTO users (name, token) VALUES (?, ?)", name, token)
+func (userDao *userDao) Create(ctx context.Context, name string, token string) error {
+	_, err := userDao.db.ExecContext(ctx, "INSERT INTO users (name, token) VALUES (?, ?)", name, token)
 	if err != nil {
 		return err
 	}
@@ -59,4 +60,13 @@ func (userDao *userDao) FindByID(ctx context.Context, userID int) (*User, error)
 	}
 
 	return &user, nil
+}
+
+func (userDao *userDao) UpdateName(ctx context.Context, userID int, newName string) error {
+	_, err := userDao.db.ExecContext(ctx, "UPDATE users SET name=? WHERE id=? ", newName, userID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

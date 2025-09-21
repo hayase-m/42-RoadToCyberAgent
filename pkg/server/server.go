@@ -30,6 +30,7 @@ func Serve(addr string) {
 	http.HandleFunc("/setting/get", get(appHandler.HandleSettingGet()))
 	http.HandleFunc("/user/create", post(appHandler.HandleUserCreate()))
 	http.HandleFunc("/user/get", get(appMiddleware.Authenticate(appHandler.HandleUserGet())))
+	http.HandleFunc("/user/update", post(appMiddleware.Authenticate(appHandler.HandleUserUpdate())))
 
 	/* ===== サーバの起動 ===== */
 	log.Println("Server running...")

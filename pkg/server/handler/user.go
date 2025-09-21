@@ -3,6 +3,7 @@ package handler
 import (
 	"42tokyo-road-to-dojo-go/pkg/http/middleware"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -25,9 +26,14 @@ type userGetResponse struct {
 	Coin      int    `json:"coin"`
 }
 
+type userUpdateRequest struct {
+	Name string `json:"name"`
+}
+
 // HandleUserCreate ユーザー作成処理 nameからtokenを作成
 func (handler *handler) HandleUserCreate() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
+		ctx := request.Context()
 		var requestBody userCreateRequest //構造体変数宣言
 		if err := json.NewDecoder(request.Body).Decode(&requestBody); err != nil {
 			log.Println(err)
@@ -35,8 +41,9 @@ func (handler *handler) HandleUserCreate() http.HandlerFunc {
 			return
 		}
 
-		if requestBody.Name == "" {
-			log.Println("name is empty")
+		err := handler.validateName(requestBody.Name)
+		if err != nil {
+			log.Println(err)
 			writer.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -44,7 +51,7 @@ func (handler *handler) HandleUserCreate() http.HandlerFunc {
 		token := uuid.NewString()
 
 		// データベースへのユーザー登録
-		if err := handler.userDao.Create(requestBody.Name, token); err != nil {
+		if err := handler.userDao.Create(ctx, requestBody.Name, token); err != nil {
 			log.Println(err)
 			writer.WriteHeader(http.StatusInternalServerError)
 			return
@@ -102,4 +109,52 @@ func (handler *handler) HandleUserGet() http.HandlerFunc {
 
 		writer.Write(data)
 	}
+}
+
+// HandleUserUpdate ユーザー名変更処理
+func (handler *handler) HandleUserUpdate() http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		ctx := request.Context()
+		interfaceUserID := ctx.Value(middleware.UserIDKey)
+
+		userID, ok := interfaceUserID.(int)
+		if !ok {
+			log.Println("Failed to assert userID")
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		var requestBody userUpdateRequest
+		if err := json.NewDecoder(request.Body).Decode(&requestBody); err != nil {
+			log.Println(err)
+			writer.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		err := handler.validateName(requestBody.Name)
+		if err != nil {
+			log.Println(err)
+			writer.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		err = handler.userDao.UpdateName(ctx, userID, requestBody.Name)
+		if err != nil {
+			log.Println(err)
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		writer.WriteHeader(http.StatusOK)
+	}
+}
+
+func (handler *handler) validateName(name string) error {
+	if name == "" {
+		return errors.New("name is empty")
+	}
+	if len(name) > 30 {
+		return errors.New("name is too long")
+	}
+	return nil
 }
