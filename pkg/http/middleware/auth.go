@@ -2,11 +2,25 @@ package middleware
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
+
+	"42tokyo-road-to-dojo-go/pkg/infra/dao"
 )
 
+type middleware struct {
+	userDao dao.UserDao
+}
+
+// 新しいmiddlewareを生成
+func NewMiddleware(userDao dao.UserDao) *middleware {
+	return &middleware{
+		userDao: userDao,
+	}
+}
+
 // Authenticate ユーザ認証を行ってContextへユーザID情報を保存する
-func Authenticate(nextFunc http.HandlerFunc) http.HandlerFunc {
+func (middleware *middleware) Authenticate(nextFunc http.HandlerFunc) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 
 		ctx := request.Context()
@@ -21,7 +35,19 @@ func Authenticate(nextFunc http.HandlerFunc) http.HandlerFunc {
 			writer.WriteHeader(http.StatusUnauthorized)
 			return
 		}
+		user, err := middleware.userDao.FindByToken(ctx, token)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				//不正tokenは401
+				writer.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			//それ以外は500エラー
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
+		ctx = context.WithValue(ctx, "user_id", user.ID) //ctxはイミュータブルなので、新たなcontextを作成
 		nextFunc(writer, request.WithContext(ctx))
 	}
 }
