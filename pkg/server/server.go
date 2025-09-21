@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"42tokyo-road-to-dojo-go/pkg/http/middleware"
 	"42tokyo-road-to-dojo-go/pkg/infra/dao"
 	"42tokyo-road-to-dojo-go/pkg/server/handler"
 
@@ -23,15 +24,14 @@ func Serve(addr string) {
 	// 依存性の注入 (DI)
 	userDao := dao.NewUserDao(db)
 	appHandler := handler.NewHandler(userDao)
+	appMiddleware := middleware.NewMiddleware(userDao)
 
 	/* ===== URLマッピングを行う ===== */
 	http.HandleFunc("/setting/get", get(appHandler.HandleSettingGet()))
 	http.HandleFunc("/user/create", post(appHandler.HandleUserCreate()))
 
-	// TODO: 認証を行うmiddlewareを実装する
-	// middlewareは pkg/http/middleware パッケージを利用する
-	// http.HandleFunc("/user/get",
-	//   get(middleware.Authenticate(handler.HandleUserGet())))
+	http.HandleFunc("/user/get",
+		get(appMiddleware.Authenticate(appHandler.HandleUserGet())))
 
 	/* ===== サーバの起動 ===== */
 	log.Println("Server running...")
