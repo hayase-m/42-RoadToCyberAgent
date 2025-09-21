@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"net/http"
@@ -24,7 +25,14 @@ func Serve(addr string) {
 	// 依存性の注入 (DI)
 	userDao := dao.NewUserDao(db)
 	itemDao := dao.NewItemDao(db)
-	appHandler := handler.NewHandler(userDao, itemDao)
+
+	//アイテムのマスターデータをキャッシュ
+	items, err := itemDao.FindAll(context.Background())
+	if err != nil {
+		log.Fatalf("Failed to get all items: %v", err)
+	}
+
+	appHandler := handler.NewHandler(userDao, itemDao, items)
 	appMiddleware := middleware.NewMiddleware(userDao)
 
 	/* ===== URLマッピングを行う ===== */

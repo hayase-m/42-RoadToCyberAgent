@@ -8,12 +8,14 @@ import (
 type handler struct {
 	userDao dao.UserDao
 	itemDao dao.ItemDao
+	items   []*dao.Item
 }
 
 // 新しいhandlerを生成
-func NewHandler(userDao dao.UserDao, itemDao dao.ItemDao) *handler {
+func NewHandler(userDao dao.UserDao, itemDao dao.ItemDao, items []*dao.Item) *handler {
 	return &handler{
 		userDao: userDao,
 		itemDao: itemDao,
+		items:   items,
 	}
 }
