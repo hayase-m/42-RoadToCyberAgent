@@ -15,6 +15,12 @@ func Authenticate(nextFunc http.HandlerFunc) http.HandlerFunc {
 		}
 
 		// TODO: implement here
+		token := request.Header.Get("x-token")
+		if token == "" {
+			//認証エラーは401
+			writer.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 
 		nextFunc(writer, request.WithContext(ctx))
 	}

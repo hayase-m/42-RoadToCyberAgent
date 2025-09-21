@@ -9,7 +9,7 @@ type handler struct {
 	userDao dao.UserDao
 }
 
-// NewHandler は新しいhandlerを生成します。
+// 新しいhandlerを生成
 func NewHandler(userDao dao.UserDao) *handler {
 	return &handler{
 		userDao: userDao,

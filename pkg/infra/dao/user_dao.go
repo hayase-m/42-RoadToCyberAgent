@@ -4,6 +4,7 @@ import (
 	"database/sql"
 )
 
+// UserDaoという型を定義。
 type UserDao interface {
 	Create(name, token string) error
 }
