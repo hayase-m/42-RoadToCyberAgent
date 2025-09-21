@@ -11,6 +11,7 @@ type UserDao interface {
 	FindByToken(ctx context.Context, token string) (*User, error)
 	FindByID(ctx context.Context, userID int) (*User, error)
 	UpdateName(ctx context.Context, userID int, newName string) error
+	GetUserCollectionItemIDs(ctx context.Context, userID int) ([]int, error)
 }
 
 type userDao struct {
@@ -69,4 +70,25 @@ func (userDao *userDao) UpdateName(ctx context.Context, userID int, newName stri
 	}
 
 	return nil
+}
+
+func (userDao *userDao) GetUserCollectionItemIDs(ctx context.Context, userID int) ([]int, error) {
+	rows, err := userDao.db.QueryContext(ctx, "SELECT item_id FROM user_collections WHERE user_id=?", userID)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	itemIDs := make([]int, 0)
+
+	for rows.Next() {
+		var itemID int
+		err := rows.Scan(&itemID)
+		if err != nil {
+			return nil, err
+		}
+		itemIDs = append(itemIDs, itemID)
+	}
+	return itemIDs, nil
 }
