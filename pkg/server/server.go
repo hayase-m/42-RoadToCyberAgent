@@ -42,6 +42,7 @@ func Serve(addr string) {
 	http.HandleFunc("/user/update", post(appMiddleware.Authenticate(appHandler.HandleUserUpdate())))
 	http.HandleFunc("/collection/list", get(appMiddleware.Authenticate(appHandler.HandleCollectionList())))
 	http.HandleFunc("/ranking/list", get(appMiddleware.Authenticate(appHandler.HandleRankingList())))
+	http.HandleFunc("/game/finish", post(appMiddleware.Authenticate(appHandler.HandleGameFinish())))
 
 	/* ===== サーバの起動 ===== */
 	log.Println("Server running...")

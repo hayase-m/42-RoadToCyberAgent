@@ -52,6 +52,14 @@ type rankingListResponse struct {
 	Ranks []rankInfo `json:"ranks"`
 }
 
+type gameFinishRequest struct {
+	Score int `json:"score"`
+}
+
+type gameFinishResponse struct {
+	Coin int `json:"coin"`
+}
+
 // HandleUserCreate ユーザー作成処理 nameからtokenを作成
 func (handler *handler) HandleUserCreate() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
@@ -241,6 +249,55 @@ func (handler *handler) HandleRankingList() http.HandlerFunc {
 		}
 
 		data, err := json.Marshal(ranks)
+		if err != nil {
+			handler.handleError(writer, err, http.StatusInternalServerError)
+			return
+		}
+
+		writer.Write(data)
+	}
+}
+
+func (handler *handler) HandleGameFinish() http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		ctx := request.Context()
+		var requestBody gameFinishRequest
+		if err := json.NewDecoder(request.Body).Decode(&requestBody); err != nil {
+			handler.handleError(writer, err, http.StatusBadRequest)
+			return
+		}
+
+		userID, err := handler.getUserIDFromContext(ctx)
+		if err != nil {
+			handler.handleError(writer, err, http.StatusInternalServerError)
+			return
+		}
+
+		score := requestBody.Score
+		if score < 0 {
+			log.Printf("Invalid value for 'score' parameter")
+			writer.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		err = handler.userDao.UpdateHighscore(ctx, userID, score)
+		if err != nil {
+			handler.handleError(writer, err, http.StatusInternalServerError)
+			return
+		}
+
+		coin := score * 100 //なんでもいい
+		err = handler.userDao.AddCoins(ctx, userID, coin)
+		if err != nil {
+			handler.handleError(writer, err, http.StatusInternalServerError)
+			return
+		}
+
+		c := gameFinishResponse{
+			Coin: coin,
+		}
+
+		data, err := json.Marshal(c)
 		if err != nil {
 			handler.handleError(writer, err, http.StatusInternalServerError)
 			return

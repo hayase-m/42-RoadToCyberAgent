@@ -14,6 +14,8 @@ type UserDao interface {
 	GetUserCollectionItemIDs(ctx context.Context, userID int) ([]int, error)
 	GetRankingList(ctx context.Context, start int, limit int) ([]*RankInfo, error)
 	CountAllUsers(ctx context.Context) (int, error)
+	UpdateHighscore(ctx context.Context, userID int, score int) error
+	AddCoins(ctx context.Context, userID int, coin int) error
 }
 
 type userDao struct {
@@ -129,4 +131,20 @@ func (userDao *userDao) CountAllUsers(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	return count, nil
+}
+
+func (userDao *userDao) UpdateHighscore(ctx context.Context, userID int, score int) error {
+	_, err := userDao.db.ExecContext(ctx, "UPDATE users SET highscore = ? WHERE highscore < ? AND id = ?", score, score, userID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (userDao *userDao) AddCoins(ctx context.Context, userID int, coin int) error {
+	_, err := userDao.db.ExecContext(ctx, "UPDATE users SET coin = coin + ? WHERE id = ?", coin, userID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
