@@ -23,7 +23,8 @@ func Serve(addr string) {
 
 	// 依存性の注入 (DI)
 	userDao := dao.NewUserDao(db)
-	appHandler := handler.NewHandler(userDao)
+	itemDao := dao.NewItemDao(db)
+	appHandler := handler.NewHandler(userDao, itemDao)
 	appMiddleware := middleware.NewMiddleware(userDao)
 
 	/* ===== URLマッピングを行う ===== */
