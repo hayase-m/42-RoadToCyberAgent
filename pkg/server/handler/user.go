@@ -58,15 +58,13 @@ func (handler *handler) HandleUserCreate() http.HandlerFunc {
 		ctx := request.Context()
 		var requestBody userCreateRequest //構造体変数宣言
 		if err := json.NewDecoder(request.Body).Decode(&requestBody); err != nil {
-			log.Println(err)
-			writer.WriteHeader(http.StatusBadRequest)
+			handler.handleError(writer, err, http.StatusBadRequest)
 			return
 		}
 
 		err := handler.validateName(requestBody.Name)
 		if err != nil {
-			log.Println(err)
-			writer.WriteHeader(http.StatusBadRequest)
+			handler.handleError(writer, err, http.StatusBadRequest)
 			return
 		}
 
@@ -74,8 +72,7 @@ func (handler *handler) HandleUserCreate() http.HandlerFunc {
 
 		// データベースへのユーザー登録
 		if err := handler.userDao.Create(ctx, requestBody.Name, token); err != nil {
-			log.Println(err)
-			writer.WriteHeader(http.StatusInternalServerError)
+			handler.handleError(writer, err, http.StatusInternalServerError)
 			return
 		}
 
@@ -84,8 +81,7 @@ func (handler *handler) HandleUserCreate() http.HandlerFunc {
 		}
 		data, err := json.Marshal(response)
 		if err != nil {
-			log.Println(err)
-			writer.WriteHeader(http.StatusInternalServerError)
+			handler.handleError(writer, err, http.StatusInternalServerError)
 			return
 		}
 
@@ -99,15 +95,13 @@ func (handler *handler) HandleUserGet() http.HandlerFunc {
 		ctx := request.Context()
 		userID, err := handler.getUserIDFromContext(ctx)
 		if err != nil {
-			log.Println(err)
-			writer.WriteHeader(http.StatusInternalServerError)
+			handler.handleError(writer, err, http.StatusInternalServerError)
 			return
 		}
 
 		user, err := handler.userDao.FindByID(ctx, userID)
 		if err != nil {
-			log.Println(err)
-			writer.WriteHeader(http.StatusInternalServerError)
+			handler.handleError(writer, err, http.StatusInternalServerError)
 			return
 		}
 
@@ -120,8 +114,7 @@ func (handler *handler) HandleUserGet() http.HandlerFunc {
 
 		data, err := json.Marshal(response)
 		if err != nil {
-			log.Println(err)
-			writer.WriteHeader(http.StatusInternalServerError)
+			handler.handleError(writer, err, http.StatusInternalServerError)
 			return
 		}
 
@@ -135,29 +128,25 @@ func (handler *handler) HandleUserUpdate() http.HandlerFunc {
 		ctx := request.Context()
 		userID, err := handler.getUserIDFromContext(ctx)
 		if err != nil {
-			log.Println(err)
-			writer.WriteHeader(http.StatusInternalServerError)
+			handler.handleError(writer, err, http.StatusInternalServerError)
 			return
 		}
 
 		var requestBody userUpdateRequest
 		if err := json.NewDecoder(request.Body).Decode(&requestBody); err != nil {
-			log.Println(err)
-			writer.WriteHeader(http.StatusBadRequest)
+			handler.handleError(writer, err, http.StatusBadRequest)
 			return
 		}
 
 		err = handler.validateName(requestBody.Name)
 		if err != nil {
-			log.Println(err)
-			writer.WriteHeader(http.StatusBadRequest)
+			handler.handleError(writer, err, http.StatusBadRequest)
 			return
 		}
 
 		err = handler.userDao.UpdateName(ctx, userID, requestBody.Name)
 		if err != nil {
-			log.Println(err)
-			writer.WriteHeader(http.StatusInternalServerError)
+			handler.handleError(writer, err, http.StatusInternalServerError)
 			return
 		}
 
@@ -170,15 +159,13 @@ func (handler *handler) HandleCollectionList() http.HandlerFunc {
 		ctx := request.Context()
 		userID, err := handler.getUserIDFromContext(ctx)
 		if err != nil {
-			log.Println(err)
-			writer.WriteHeader(http.StatusInternalServerError)
+			handler.handleError(writer, err, http.StatusInternalServerError)
 			return
 		}
 
 		userCollectionItemIDs, err := handler.userDao.GetUserCollectionItemIDs(ctx, userID)
 		if err != nil {
-			log.Println(err)
-			writer.WriteHeader(http.StatusInternalServerError)
+			handler.handleError(writer, err, http.StatusInternalServerError)
 			return
 		}
 
@@ -205,8 +192,7 @@ func (handler *handler) HandleCollectionList() http.HandlerFunc {
 
 		data, err := json.Marshal(collections)
 		if err != nil {
-			log.Println(err)
-			writer.WriteHeader(http.StatusInternalServerError)
+			handler.handleError(writer, err, http.StatusInternalServerError)
 			return
 		}
 
@@ -219,15 +205,13 @@ func (handler *handler) HandleRankingList() http.HandlerFunc {
 		ctx := request.Context()
 		usersCount, err := handler.userDao.CountAllUsers(ctx)
 		if err != nil {
-			log.Println(err)
-			writer.WriteHeader(http.StatusInternalServerError)
+			handler.handleError(writer, err, http.StatusInternalServerError)
 			return
 		}
 		startStr := request.URL.Query().Get("start")
 		start, err := strconv.Atoi(startStr)
 		if err != nil {
-			log.Println(err)
-			writer.WriteHeader(http.StatusBadRequest)
+			handler.handleError(writer, err, http.StatusBadRequest)
 			return
 		}
 		if start < 1 || start > usersCount {
@@ -238,8 +222,7 @@ func (handler *handler) HandleRankingList() http.HandlerFunc {
 
 		rankList, err := handler.userDao.GetRankingList(ctx, start, 10)
 		if err != nil {
-			log.Println(err)
-			writer.WriteHeader(http.StatusInternalServerError)
+			handler.handleError(writer, err, http.StatusInternalServerError)
 			return
 		}
 
@@ -259,8 +242,7 @@ func (handler *handler) HandleRankingList() http.HandlerFunc {
 
 		data, err := json.Marshal(ranks)
 		if err != nil {
-			log.Println(err)
-			writer.WriteHeader(http.StatusInternalServerError)
+			handler.handleError(writer, err, http.StatusInternalServerError)
 			return
 		}
 
