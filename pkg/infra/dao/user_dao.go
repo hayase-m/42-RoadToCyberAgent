@@ -13,6 +13,7 @@ type UserDao interface {
 	UpdateName(ctx context.Context, userID int, newName string) error
 	GetUserCollectionItemIDs(ctx context.Context, userID int) ([]int, error)
 	GetRankingList(ctx context.Context, start int, limit int) ([]*RankInfo, error)
+	CountAllUsers(ctx context.Context) (int, error)
 }
 
 type userDao struct {
@@ -119,4 +120,13 @@ func (userDao *userDao) GetRankingList(ctx context.Context, start int, limit int
 		rankList = append(rankList, &rankInfo)
 	}
 	return rankList, nil
+}
+
+func (userDao *userDao) CountAllUsers(ctx context.Context) (int, error) {
+	var count int
+	err := userDao.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM users").Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }

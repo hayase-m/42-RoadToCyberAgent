@@ -31,10 +31,6 @@ type userUpdateRequest struct {
 	Name string `json:"name"`
 }
 
-type collectionListRequest struct {
-	Token string `json:"token"`
-}
-
 type collection struct {
 	CollectionID string `json:"collectionID"`
 	Name         string `json:"name"`
@@ -43,6 +39,17 @@ type collection struct {
 }
 type collectionListResponse struct {
 	Collections []collection `json:"collections"`
+}
+
+type rankInfo struct {
+	UserID   string `json:"userId"`
+	UserName string `json:"userName"`
+	Rank     int    `json:"rank"`
+	Score    int    `json:"score"`
+}
+
+type rankingListResponse struct {
+	Ranks []rankInfo `json:"ranks"`
 }
 
 // HandleUserCreate ユーザー作成処理 nameからtokenを作成
@@ -197,6 +204,60 @@ func (handler *handler) HandleCollectionList() http.HandlerFunc {
 		}
 
 		data, err := json.Marshal(collections)
+		if err != nil {
+			log.Println(err)
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		writer.Write(data)
+	}
+}
+
+func (handler *handler) HandleRankingList() http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		ctx := request.Context()
+		usersCount, err := handler.userDao.CountAllUsers(ctx)
+		if err != nil {
+			log.Println(err)
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		startStr := request.URL.Query().Get("start")
+		start, err := strconv.Atoi(startStr)
+		if err != nil {
+			log.Println(err)
+			writer.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if start < 1 || start > usersCount {
+			log.Printf("Invalid value for 'start' parameter")
+			writer.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		rankList, err := handler.userDao.GetRankingList(ctx, start, 10)
+		if err != nil {
+			log.Println(err)
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		ranks := rankingListResponse{
+			Ranks: make([]rankInfo, 0),
+		}
+
+		for i, rank := range rankList {
+			r := rankInfo{
+				UserID:   strconv.Itoa(rank.UserID),
+				UserName: rank.UserName,
+				Rank:     start + i,
+				Score:    rank.Score,
+			}
+			ranks.Ranks = append(ranks.Ranks, r)
+		}
+
+		data, err := json.Marshal(ranks)
 		if err != nil {
 			log.Println(err)
 			writer.WriteHeader(http.StatusInternalServerError)
