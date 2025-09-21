@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -223,8 +222,7 @@ func (handler *handler) HandleRankingList() http.HandlerFunc {
 			return
 		}
 		if start < 1 || start > usersCount {
-			log.Printf("Invalid value for 'start' parameter")
-			writer.WriteHeader(http.StatusBadRequest)
+			handler.handleError(writer, errors.New("invalid value for 'start' parameter"), http.StatusBadRequest)
 			return
 		}
 
@@ -275,8 +273,7 @@ func (handler *handler) HandleGameFinish() http.HandlerFunc {
 
 		score := requestBody.Score
 		if score < 0 {
-			log.Printf("Invalid value for 'score' parameter")
-			writer.WriteHeader(http.StatusBadRequest)
+			handler.handleError(writer, errors.New("invalid value for 'score' parameter"), http.StatusBadRequest)
 			return
 		}
 
@@ -316,7 +313,6 @@ func (handler *handler) getUserIDFromContext(ctx context.Context) (int, error) {
 	//Valueが返す値はinterface{}型のため変換
 	userID, ok := interfaceUserID.(int) //okはbool
 	if !ok {
-		//500エラー
 		return 0, errors.New("userID in context is not int")
 	}
 
