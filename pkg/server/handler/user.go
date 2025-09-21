@@ -2,6 +2,7 @@ package handler
 
 import (
 	"42tokyo-road-to-dojo-go/pkg/http/middleware"
+	"context"
 	"encoding/json"
 	"errors"
 	"log"
@@ -28,6 +29,20 @@ type userGetResponse struct {
 
 type userUpdateRequest struct {
 	Name string `json:"name"`
+}
+
+type collectionListRequest struct {
+	Token string `json:"token"`
+}
+
+type collection struct {
+	CollectionID string `json:"collectionID"`
+	Name         string `json:"name"`
+	Rarity       int    `json:"rarity"`
+	HasItem      bool   `json:"hasItem"`
+}
+type collectionListResponse struct {
+	Collections []collection `json:"collections"`
 }
 
 // HandleUserCreate ユーザー作成処理 nameからtokenを作成
@@ -75,13 +90,9 @@ func (handler *handler) HandleUserCreate() http.HandlerFunc {
 func (handler *handler) HandleUserGet() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		ctx := request.Context()
-		interfaceUserID := ctx.Value(middleware.UserIDKey)
-
-		//Valueが返す値はinterface{}型のため変換
-		userID, ok := interfaceUserID.(int) //okはbool
-		if !ok {
-			//500エラー
-			log.Println("Failed to assert userID from context")
+		userID, err := handler.getUserIDFromContext(ctx)
+		if err != nil {
+			log.Println(err)
 			writer.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -115,11 +126,9 @@ func (handler *handler) HandleUserGet() http.HandlerFunc {
 func (handler *handler) HandleUserUpdate() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		ctx := request.Context()
-		interfaceUserID := ctx.Value(middleware.UserIDKey)
-
-		userID, ok := interfaceUserID.(int)
-		if !ok {
-			log.Println("Failed to assert userID")
+		userID, err := handler.getUserIDFromContext(ctx)
+		if err != nil {
+			log.Println(err)
 			writer.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -131,7 +140,7 @@ func (handler *handler) HandleUserUpdate() http.HandlerFunc {
 			return
 		}
 
-		err := handler.validateName(requestBody.Name)
+		err = handler.validateName(requestBody.Name)
 		if err != nil {
 			log.Println(err)
 			writer.WriteHeader(http.StatusBadRequest)
@@ -147,6 +156,71 @@ func (handler *handler) HandleUserUpdate() http.HandlerFunc {
 
 		writer.WriteHeader(http.StatusOK)
 	}
+}
+
+func (handler *handler) HandleCollectionList() http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		ctx := request.Context()
+		userID, err := handler.getUserIDFromContext(ctx)
+		if err != nil {
+			log.Println(err)
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		userCollectionItemIDs, err := handler.userDao.GetUserCollectionItemIDs(ctx, userID)
+		if err != nil {
+			log.Println(err)
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		collections := collectionListResponse{
+			Collections: make([]collection, 0),
+		}
+
+		userItemMap := make(map[int]bool)
+		for _, itemID := range userCollectionItemIDs {
+			userItemMap[itemID] = true
+		}
+
+		for _, item := range handler.items {
+			hasItem := userItemMap[item.ID] //mapはkeyが存在しなければ型のゼロ値を返す（今回はfalse）
+
+			c := collection{
+				CollectionID: strconv.Itoa(item.ID),
+				Name:         item.Name,
+				Rarity:       item.Rarity,
+				HasItem:      hasItem,
+			}
+			collections.Collections = append(collections.Collections, c)
+		}
+
+		data, err := json.Marshal(collections)
+		if err != nil {
+			log.Println(err)
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		writer.Write(data)
+	}
+}
+
+func (handler *handler) getUserIDFromContext(ctx context.Context) (int, error) {
+	interfaceUserID := ctx.Value(middleware.UserIDKey)
+	if interfaceUserID == nil {
+		return 0, errors.New("userID not found in context")
+	}
+
+	//Valueが返す値はinterface{}型のため変換
+	userID, ok := interfaceUserID.(int) //okはbool
+	if !ok {
+		//500エラー
+		return 0, errors.New("userID in context is not int")
+	}
+
+	return userID, nil
 }
 
 func (handler *handler) validateName(name string) error {
