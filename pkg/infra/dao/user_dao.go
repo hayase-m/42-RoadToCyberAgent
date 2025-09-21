@@ -12,6 +12,7 @@ type UserDao interface {
 	FindByID(ctx context.Context, userID int) (*User, error)
 	UpdateName(ctx context.Context, userID int, newName string) error
 	GetUserCollectionItemIDs(ctx context.Context, userID int) ([]int, error)
+	GetRankingList(ctx context.Context, start int, limit int) ([]*RankInfo, error)
 }
 
 type userDao struct {
@@ -25,6 +26,12 @@ type User struct {
 	Highscore int
 	Coin      int
 	Token     string
+}
+
+type RankInfo struct {
+	UserID   int
+	UserName string
+	Score    int
 }
 
 func NewUserDao(db *sql.DB) UserDao {
@@ -91,4 +98,25 @@ func (userDao *userDao) GetUserCollectionItemIDs(ctx context.Context, userID int
 		itemIDs = append(itemIDs, itemID)
 	}
 	return itemIDs, nil
+}
+
+func (userDao *userDao) GetRankingList(ctx context.Context, start int, limit int) ([]*RankInfo, error) {
+	rows, err := userDao.db.QueryContext(ctx, "SELECT id, name, highscore FROM users ORDER BY highscore DESC, id ASC LIMIT ? OFFSET ?", limit, start-1)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	rankList := make([]*RankInfo, 0)
+
+	for rows.Next() {
+		var rankInfo RankInfo
+		err := rows.Scan(&rankInfo.UserID, &rankInfo.UserName, &rankInfo.Score)
+		if err != nil {
+			return nil, err
+		}
+		rankList = append(rankList, &rankInfo)
+	}
+	return rankList, nil
 }
