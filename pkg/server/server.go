@@ -25,6 +25,7 @@ func Serve(addr string) {
 	// 依存性の注入 (DI)
 	userDao := dao.NewUserDao(db)
 	itemDao := dao.NewItemDao(db)
+	gachaDao := dao.NewGachaDao(db)
 
 	//アイテムのマスターデータをキャッシュ
 	items, err := itemDao.FindAll(context.Background())
@@ -32,7 +33,13 @@ func Serve(addr string) {
 		log.Fatalf("Failed to get all items: %v", err)
 	}
 
-	appHandler := handler.NewHandler(userDao, itemDao, items)
+	//ガチャのマスターデータをキャッシュ
+	gachas, err := gachaDao.FindAll(context.Background())
+	if err != nil {
+		log.Fatalf("Failed to get all gachas: %v", err)
+	}
+
+	appHandler := handler.NewHandler(userDao, itemDao, gachaDao, items, gachas)
 	appMiddleware := middleware.NewMiddleware(userDao)
 
 	/* ===== URLマッピングを行う ===== */
