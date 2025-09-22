@@ -33,13 +33,18 @@ func Serve(addr string) {
 		log.Fatalf("Failed to get all items: %v", err)
 	}
 
+	itemMap := make(map[int]*dao.Item)
+	for _, item := range items {
+		itemMap[item.ID] = item
+	}
+
 	//ガチャのマスターデータをキャッシュ
 	gachas, err := gachaDao.FindAll(context.Background())
 	if err != nil {
 		log.Fatalf("Failed to get all gachas: %v", err)
 	}
 
-	appHandler := handler.NewHandler(userDao, itemDao, gachaDao, items, gachas)
+	appHandler := handler.NewHandler(userDao, itemDao, gachaDao, items, itemMap, gachas)
 	appMiddleware := middleware.NewMiddleware(userDao)
 
 	/* ===== URLマッピングを行う ===== */
@@ -50,6 +55,7 @@ func Serve(addr string) {
 	http.HandleFunc("/collection/list", get(appMiddleware.Authenticate(appHandler.HandleCollectionList())))
 	http.HandleFunc("/ranking/list", get(appMiddleware.Authenticate(appHandler.HandleRankingList())))
 	http.HandleFunc("/game/finish", post(appMiddleware.Authenticate(appHandler.HandleGameFinish())))
+	http.HandleFunc("/gacha/draw", post(appMiddleware.Authenticate(appHandler.HandleGachaDraw())))
 
 	/* ===== サーバの起動 ===== */
 	log.Println("Server running...")

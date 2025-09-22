@@ -3,6 +3,7 @@ package dao
 import (
 	"context"
 	"database/sql"
+	"strings"
 )
 
 // UserDaoという型を定義。
@@ -16,6 +17,7 @@ type UserDao interface {
 	CountAllUsers(ctx context.Context) (int, error)
 	UpdateHighscore(ctx context.Context, userID int, score int) error
 	AddCoins(ctx context.Context, userID int, coin int) error
+	ExecuteGachaDrawTransaction(ctx context.Context, userID int, coin int, itemIDs []int) error
 }
 
 type userDao struct {
@@ -147,4 +149,39 @@ func (userDao *userDao) AddCoins(ctx context.Context, userID int, coin int) erro
 		return err
 	}
 	return nil
+}
+
+func (userDao *userDao) ExecuteGachaDrawTransaction(ctx context.Context, userID int, coin int, itemIDs []int) error {
+	tx, err := userDao.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx, "UPDATE users SET coin = coin - ? WHERE id = ?", coin, userID)
+	if err != nil {
+		return err
+	}
+
+	if len(itemIDs) == 0 {
+		return tx.Commit() // コイン消費だけを確定
+	}
+	sqlInsert := "INSERT INTO user_collections (user_id, item_id) VALUES "
+
+	placeholders := make([]string, 0)
+	args := make([]interface{}, 0)
+
+	for _, itemID := range itemIDs {
+		placeholders = append(placeholders, "(?, ?)")
+		args = append(args, userID, itemID)
+	}
+
+	sqlInsert += strings.Join(placeholders, ", ")
+
+	_, err = tx.ExecContext(ctx, sqlInsert, args...) // ...をつけることでバラして渡せる。
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
