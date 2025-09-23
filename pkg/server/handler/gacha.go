@@ -75,10 +75,12 @@ func (handler *handler) HandleGachaDraw() http.HandlerFunc {
 		}
 
 		unownedItemIDs := make([]int, 0)
+		addedItemMap := make(map[int]bool)
 
 		for _, result := range results {
-			if !userItemMap[result.ItemID] {
+			if !userItemMap[result.ItemID] && !addedItemMap[result.ItemID] {
 				unownedItemIDs = append(unownedItemIDs, result.ItemID)
+				addedItemMap[result.ItemID] = true
 			}
 		}
 
